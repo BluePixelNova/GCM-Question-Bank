@@ -27,7 +27,7 @@ const SelectLevel: React.FC<SelectLevelProps> = ({ theme, onToggleTheme }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (dept && program && semester) {
-      navigate(`/materials/${dept.toLowerCase()}/${program.toLowerCase()}/${semester}/`);
+      navigate(`/materials/${dept.toLowerCase()}/${program.toLowerCase()}/${semester}`);
     }
   };
 

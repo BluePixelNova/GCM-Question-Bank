@@ -24,7 +24,7 @@ const MaterialsPage: React.FC<MaterialsPageProps> = ({ theme, onToggleTheme }) =
         // Path structure: department/program/sem{number}/
         // Matches the screenshot: privet-files -> commerce -> pg -> sem1
         console.log('PARAMS:', { dept, program, semester });
-        const folderPath = `${dept?.toLowerCase()}/${program?.toLowerCase()}/${semester}`;
+        const folderPath = `${dept?.toLowerCase()}/${program?.toLowerCase()}/sem${semester}`;
         console.log('STORAGE PATH:', folderPath);
         // List files in the verified 'privet-files' bucket
         const { data, error: storageError } = await supabase
@@ -36,24 +36,34 @@ const MaterialsPage: React.FC<MaterialsPageProps> = ({ theme, onToggleTheme }) =
             sortBy: { column: 'name', order: 'asc' },
           });
 
-        if (storageError) throw storageError;
+          if (data) {
+          const files = await Promise.all(
+            data
+              .filter(file => !file.name.endsWith('/'))
+              .map(async (file) => {
+                const { data: signedData, error } = await supabase
+                  .storage
+                  .from('privet-files')
+                  .createSignedUrl(
+                    `${folderPath}/${file.name}`,
+                    60 * 60 // 1 hour
+                  );
 
-        if (data) {
-          const files = data
-            .filter(file => !file.name.endsWith('/'))
-            .map((file) => {
-              const { data: publicUrlData } = supabase
-                .storage
-                .from('privet-files')
-                .getPublicUrl(`${folderPath}${file.name}`);
-              
-              return {
-                name: file.name,
-                url: publicUrlData.publicUrl
-              };
-            });
-          setMaterials(files);
-        }
+                if (error) {
+                  console.error('Signed URL error:', error);
+                  return null;
+                }
+
+                return {
+                  name: file.name,
+                  url: signedData.signedUrl
+                };
+              })
+          );
+
+          setMaterials(files.filter(Boolean) as Material[]);
+          }
+
       } catch (err: any) {
         console.error('Integration Error:', err);
         setError('Failed to fetch materials. Please check your connection or try again later.');
